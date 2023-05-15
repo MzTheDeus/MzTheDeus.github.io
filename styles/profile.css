@@ -69,8 +69,9 @@ img {
   background-color: rgba(255, 255, 255, 0.2);
   border-radius: 5px;
 }
-.link-text {
 
+.social-link:hover {
+  background-color: rgba(255, 255, 255, 0.3);
 }
 
 svg {
@@ -82,5 +83,10 @@ svg {
 .arrow {
   height: 25px;
   padding-right: 15px;
+}
+
+a, a:visited {
+  color: white;
+  text-decoration: none;
 }
 
