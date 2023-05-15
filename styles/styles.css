@@ -1,0 +1,123 @@
+* {
+    padding: 0;
+    margin: 0;
+    font-family: Roboto;
+    
+}
+body, html {
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+.bg-img {
+    height: 100%;
+    width: 100%;
+    background-image: url(/images/927025.png);
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    filter: brightness(50%) blur(15px);
+    position: absolute;
+}
+
+h1 {
+    text-align: center;
+    padding-top: 45px;
+}
+
+.bg-box {
+    border-radius: 15px;
+    color: white;
+    position: relative;
+    background-color: rgba(0, 0, 0, 0.7);
+    top: 15%;
+    margin-left: auto;
+    margin-right: auto;
+    width: 500px;
+    height: 550px;
+}
+
+.main-container {
+    padding-top: 50px;
+}
+
+.n-content {
+    align-items: center;
+    justify-content: center;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 30px;
+}
+.name {
+    font-weight: bold;
+    padding: 15px;
+}
+
+input {
+    padding: 0px 15px;
+    width: 63%;
+    color: white;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 5px;
+    border: none;
+    height: 30px;
+    font-size: 20px;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+input:focus {
+    outline: none;
+}
+
+input:hover {
+    background-color: rgba(255, 255, 255, 0.5);
+}
+
+.button {
+    margin-top: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+button {
+    padding: 5px 25px;
+    background-color: rgba(255, 255, 255, 0.5);
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    color: white;
+    font-size: 15px;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+button:hover {
+    background-color: rgba(255, 255, 255, 0.8);
+    color: black;
+}
+
+.socials {
+    margin: 0px 65px;
+    padding-top: 60px;
+    display: flex;
+    justify-content: space-around;
+    align-content: flex-end;
+    z-index: 200;
+}
+
+svg {
+    fill: rgba(255, 255, 255, 0.5);
+    height: 36px;
+    cursor: pointer;
+    transition: fill 0.3s;
+}
+
+svg:hover {
+    fill: rgba(255, 255, 255, 0.8);
+}
+
+a, a:visited {
+    text-decoration: none;
+}
