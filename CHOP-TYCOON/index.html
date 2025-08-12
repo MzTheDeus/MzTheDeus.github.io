@@ -2,33 +2,31 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Chop Tycoon</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Chop Tycoon — Mobile Portrait</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <canvas id="game" width="960" height="600"></canvas>
+  <!-- Top header / HUD -->
+  <header id="topbar">
+    <div class="stat">🪵 <span id="wood">0</span></div>
+    <div class="stat">🪙 <span id="gold">0</span></div>
+    <div class="stat">🪓 <span id="axe">Wooden</span></div>
+    <div class="stat">⭐ <span id="level">1</span></div>
+    <button id="helpBtn" class="ghost">❓ Help</button>
+  </header>
 
-  
-  <!-- Mobile quick actions (shown only on small screens) -->
+  <!-- Game canvas fills the rest of the screen (portrait) -->
+  <canvas id="game" width="600" height="900"></canvas>
+
+  <!-- Mobile quick actions (sticky bottom) -->
   <div id="quick">
     <button id="quickStore" title="Open Store">🏪 Store</button>
-    <button id="quickSell" title="Sell All Wood">💰 Sell</button>
+    <button id="quickSell"  title="Sell All Wood">💰 Sell</button>
   </div>
-
-
-  <!-- UI Overlay -->
-  <div id="hud">
-    <div>🪵 Wood: <span id="wood">0</span></div>
-    <div>🪙 Gold: <span id="gold">0</span></div>
-    <div>🪓 Axe: <span id="axe">Wooden</span></div>
-    <div>⭐ Level: <span id="level">1</span> <span class="muted">(XP <span id="xp">0</span>/<span id="xpNext">50</span>)</span></div>
-    <div class="hint">Click to move · Click a tree to chop (auto) · Click the shop to open/close</div>
-  </div>
-
 
   <!-- Store panel -->
-  <div id="store" class="hidden">
+  <div id="store" class="overlay hidden">
     <div class="panel">
       <h2>🏪 General Store</h2>
       <p class="muted">Sell wood and buy stronger axes.</p>
@@ -41,7 +39,24 @@
       <div id="axes"></div>
 
       <div class="row end">
-        <button id="closeStore">Close (E)</button>
+        <button id="closeStore">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Help / Guide panel (auto-opens on first load) -->
+  <div id="guide" class="overlay hidden">
+    <div class="panel">
+      <h2>❓ How to Play</h2>
+      <ul class="guide">
+        <li>Tap the ground to move.</li>
+        <li>Tap a tree to <strong>auto-chop</strong> until it falls.</li>
+        <li>Walk into the <strong>STORE</strong> area or tap <strong>🏪 Store</strong> to open the shop.</li>
+        <li>Sell wood for gold; buy higher-tier axes (requires certain <strong>level</strong>).</li>
+        <li><strong>Oak</strong> trees need higher level to chop.</li>
+      </ul>
+      <div class="row end">
+        <button id="closeGuide">Let’s Chop!</button>
       </div>
     </div>
   </div>

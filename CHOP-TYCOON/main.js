@@ -1,28 +1,78 @@
-/* =========================================
-   Chop Tycoon — v4 (Mobile-optimized)
-   - Pointer/touch to move & chop
-   - Responsive canvas with devicePixelRatio scaling
-   - Quick Store/Sell buttons on mobile
-   ========================================= */
+/* ==========================================================
+   Chop Tycoon — Portrait v6 (mobile-first)
+   - Portrait world (600x900)
+   - Header HUD (top), Help modal auto-opens
+   - Tap to move; tap tree to auto-chop; bottom quick actions
+   - Canvas scales to fill between header & bottom buttons
+   ========================================================== */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d", { alpha:false });
 
-// Logical world size follows CSS pixel size of the canvas
-const WORLD = { w: 960, h: 600 };
+/* ---------- Portrait world & scaling ---------- */
+const WORLD_BASE = { w: 600, h: 900 };   // portrait
+const WORLD = { w: 600, h: 900 };        // logic units
+let SCALE = 1;
 let DPR = window.devicePixelRatio || 1;
 
-// ===== Tree types & world data =====
+function reservedBottomPx(){
+  const quick = document.getElementById("quick");
+  const styles = getComputedStyle(quick);
+  const safe = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-bottom')) || 0;
+  return quick.offsetHeight + 10 + safe; // buttons height + gap + safe area
+}
+function headerPx(){
+  const top = document.getElementById("topbar");
+  const safe = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-top')) || 0;
+  return top.offsetHeight + safe;
+}
+
+function resizeCanvas(){
+  // Available viewport minus header and bottom controls
+  const availW = window.innerWidth;
+  const availH = Math.max(320, window.innerHeight - headerPx() - reservedBottomPx());
+
+  // Fit whole world
+  SCALE = Math.min(availW / WORLD_BASE.w, availH / WORLD_BASE.h, 1);
+  DPR   = window.devicePixelRatio || 1;
+
+  // CSS display size
+  const cssW = Math.floor(WORLD_BASE.w * SCALE);
+  const cssH = Math.floor(WORLD_BASE.h * SCALE);
+  canvas.style.width  = cssW + "px";
+  canvas.style.height = cssH + "px";
+
+  // Backing resolution
+  canvas.width  = Math.floor(cssW * DPR);
+  canvas.height = Math.floor(cssH * DPR);
+
+  // Render transform (draw in WORLD units)
+  ctx.setTransform(SCALE * DPR, 0, 0, SCALE * DPR, 0, 0);
+
+  WORLD.w = WORLD_BASE.w;
+  WORLD.h = WORLD_BASE.h;
+}
+addEventListener("resize", resizeCanvas);
+setTimeout(resizeCanvas, 0); // after layout
+
+/* Convert pointer coords → world coords */
+function getCanvasPos(evt){
+  const rect = canvas.getBoundingClientRect();
+  const x = (evt.clientX - rect.left) * (WORLD_BASE.w / rect.width);
+  const y = (evt.clientY - rect.top)  * (WORLD_BASE.h / rect.height);
+  return { x, y };
+}
+
+/* ---------- Game data ---------- */
 const TYPES = {
-  pine: { name:"Pine", radius:22, maxHp:20, yieldMin:8,  yieldMax:11, colorLeaf:"#2f7a45", reqLevel:1, xpGain:10 },
-  oak:  { name:"Oak",  radius:26, maxHp:40, yieldMin:16, yieldMax:22, colorLeaf:"#2a6a2f", reqLevel:3, xpGain:25 },
+  pine: { name:"Pine", radius:22, maxHp:24, yieldMin:8,  yieldMax:12, colorLeaf:"#2f7a45", reqLevel:1, xpGain:10 },
+  oak:  { name:"Oak",  radius:26, maxHp:46, yieldMin:16, yieldMax:22, colorLeaf:"#2a6a2f", reqLevel:3, xpGain:25 },
 };
 const TREES = [];
 const TREE_RESPAWN_MS = 12000;
-const STORE_ZONE = { x: 780, y: 440, w: 150, h: 120 };
+const STORE_ZONE = { x: 390, y: 740, w: 170, h: 110 }; // bottom-right area in portrait
 
-// ===== Player & progression =====
 const player = {
-  x: 120, y: 120, r: 14, speed: 3.1,        // slightly faster for mobile feel
+  x: 120, y: 180, r: 14, speed: 3.2,
   wood: 0, gold: 0,
   axeTier: 0, nextChopAt: 0,
   level: 1, xp: 0, xpNext: 50,
@@ -35,50 +85,22 @@ const AXES = [
   { name: "Steel",  power: 18, cooldown: 360, price: 240, minLevel: 5 },
 ];
 
-// ===== Click-to-move & auto-chop =====
-let moveTarget = null;     // {x,y} we’re walking to
-let targetTree = null;     // tree we’re auto-chopping
+/* ---------- Input: pointer (mouse + touch) ---------- */
+let moveTarget = null;     // {x,y}
+let targetTree = null;     // tree to auto-chop
 const CHOP_RANGE = 50;
 
-// ===== Responsive canvas (HiDPI) =====
-function resizeCanvas(){
-  // CSS size (displayed) → real pixel size for sharpness
-  const cssW = Math.max(320, Math.floor(canvas.clientWidth));
-  const cssH = Math.max(240, Math.floor(canvas.clientHeight));
-  DPR = window.devicePixelRatio || 1;
-
-  canvas.width  = Math.floor(cssW * DPR);
-  canvas.height = Math.floor(cssH * DPR);
-
-  // Draw in CSS pixel units (scale once)
-  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-
-  WORLD.w = cssW;
-  WORLD.h = cssH;
-}
-resizeCanvas();
-addEventListener("resize", resizeCanvas);
-
-// ===== Input: Pointer events (works for mouse + touch) =====
-canvas.style.touchAction = "none"; // avoid scroll/zoom gestures
-
-function getCanvasPos(evt){
-  const rect = canvas.getBoundingClientRect();
-  const x = (evt.clientX - rect.left) * (canvas.width / rect.width) / DPR;
-  const y = (evt.clientY - rect.top)  * (canvas.height / rect.height) / DPR;
-  return { x, y };
-}
-
+canvas.style.touchAction = "none";
 canvas.addEventListener("pointerdown", (e) => {
   const p = getCanvasPos(e);
 
-  // Shop tapped?
+  // Shop tap?
   if (pointInRect(p.x, p.y, STORE_ZONE)){
     toggleStore(storeEl.classList.contains("hidden"));
     return;
   }
 
-  // Tree tapped?
+  // Tree tap?
   const tr = treeAtPoint(p.x, p.y);
   if (tr){
     targetTree = tr;
@@ -92,51 +114,35 @@ canvas.addEventListener("pointerdown", (e) => {
                  y: clamp(p.y, player.r, WORLD.h - player.r) };
 }, { passive:false });
 
-// ===== Utility =====
-function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
-function pointInRect(x,y,r){ return x>r.x && x<r.x+r.w && y>r.y && y<r.y+r.h; }
-function treeAtPoint(x,y){
-  for (const tr of TREES){
-    if (!tr.alive) continue;
-    const rr = TYPES[tr.type].radius + 8;
-    const dx = x - tr.x, dy = y - tr.y;
-    if (dx*dx + dy*dy <= rr*rr) return tr;
-  }
-  return null;
-}
-
-// ===== Trees =====
+/* ---------- Trees ---------- */
 function makeTree(x, y, type) {
   const t = TYPES[type];
   return { type, x, y, r: t.radius, hp: t.maxHp, alive: true, respawnAt: 0 };
 }
-const spots = [
-  { x: 200, y: 160, type: "pine" },
-  { x: 340, y: 420, type: "pine" },
-  { x: 520, y: 220, type: "oak"  },
-  { x: 680, y: 140, type: "pine" },
-  { x: 480, y: 520, type: "oak"  },
-];
-for (const s of spots) TREES.push(makeTree(s.x, s.y, s.type));
+// Layout: 5 trees, spaced for portrait
+[
+  { x: 140, y: 260, type: "pine" },
+  { x: 300, y: 360, type: "oak"  },
+  { x: 460, y: 260, type: "pine" },
+  { x: 200, y: 520, type: "pine" },
+  { x: 420, y: 520, type: "oak"  },
+].forEach(s => TREES.push(makeTree(s.x, s.y, s.type)));
 
-// ===== Game loop =====
+/* ---------- Main loop ---------- */
 let last = performance.now();
 function loop(t){
-  const dt = Math.min(32, t - last);
-  last = t;
-  update(dt);
-  render();
-  requestAnimationFrame(loop);
+  const dt = Math.min(32, t - last); last = t;
+  update(dt); render(); requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
 
-// ===== Update =====
+/* ---------- Update ---------- */
 function update(dt){
-  // Move towards target
+  // Move
   if (moveTarget){
     const dx = moveTarget.x - player.x;
     const dy = moveTarget.y - player.y;
-    const d = Math.hypot(dx, dy);
+    const d = Math.hypot(dx,dy);
     if (d > 1){
       const step = player.speed;
       player.x += (dx / d) * step;
@@ -145,12 +151,10 @@ function update(dt){
       moveTarget = null;
     }
   }
-
-  // Clamp
   player.x = clamp(player.x, player.r, WORLD.w - player.r);
   player.y = clamp(player.y, player.r, WORLD.h - player.r);
 
-  // Auto-chop if we have a target
+  // Auto-chop
   if (targetTree){
     if (!targetTree.alive){
       targetTree = null;
@@ -164,38 +168,36 @@ function update(dt){
     }
   }
 
-  // Respawn trees
+  // Respawn
   const now = performance.now();
   for (const tr of TREES){
     if (!tr.alive && now >= tr.respawnAt){
-      tr.alive = true;
-      tr.hp = TYPES[tr.type].maxHp;
+      tr.alive = true; tr.hp = TYPES[tr.type].maxHp;
       flashText(`${TYPES[tr.type].name} regrew 🌳`, tr.x, tr.y - 40, "#9bd0ff");
     }
   }
 }
 
-// Attempt a chop if allowed
+/* ---------- Chop logic ---------- */
 function tryChop(tr){
   const now = performance.now();
   if (now < player.nextChopAt) return;
 
-  const reqLvTree = TYPES[tr.type].reqLevel;
+  const tt = TYPES[tr.type];
   const axe = AXES[player.axeTier];
 
-  if (player.level < reqLvTree){
-    flashText(`Need Lv ${reqLvTree} for ${TYPES[tr.type].name}`, tr.x, tr.y - 40, "#ffd17a");
-    player.nextChopAt = now + 350;
-    return;
+  if (player.level < tt.reqLevel){
+    flashText(`Need Lv ${tt.reqLevel} for ${tt.name}`, tr.x, tr.y - 40, "#ffd17a");
+    player.nextChopAt = now + 350; return;
   }
   if (player.level < axe.minLevel){
     flashText(`Need Lv ${axe.minLevel} for ${axe.name} axe`, player.x, player.y - 28, "#ffd17a");
-    player.nextChopAt = now + 350;
-    return;
+    player.nextChopAt = now + 350; return;
   }
 
   tr.hp -= axe.power;
   player.nextChopAt = now + axe.cooldown;
+
   if (tr.hp <= 0){
     fellTree(tr);
     targetTree = null;
@@ -216,7 +218,7 @@ function fellTree(tr){
   updateHUD();
 }
 
-// ===== XP / Level =====
+/* ---------- XP / Level ---------- */
 function gainXp(amount){
   player.xp += amount;
   flashText(`+${amount} XP`, player.x, player.y - 48, "#9bd0ff");
@@ -227,64 +229,64 @@ function gainXp(amount){
     flashText(`Level Up! ★${player.level}`, player.x, player.y - 64, "#ffd17a");
   }
   updateHUD();
-  refreshStore(); // update buttons if open
+  refreshStore();
 }
 
-// ===== Render =====
+/* ---------- Render ---------- */
 function render(){
   ctx.clearRect(0,0,WORLD.w,WORLD.h);
   drawGrid();
 
-  // store zone
+  // Store zone (bottom-right)
   ctx.fillStyle = "rgba(90,169,255,0.12)";
   ctx.fillRect(STORE_ZONE.x, STORE_ZONE.y, STORE_ZONE.w, STORE_ZONE.h);
   ctx.strokeStyle = "rgba(90,169,255,0.6)";
   ctx.strokeRect(STORE_ZONE.x+0.5, STORE_ZONE.y+0.5, STORE_ZONE.w-1, STORE_ZONE.h-1);
-  ctx.fillStyle = "#9bb3d1";
-  ctx.font = "14px system-ui";
-  ctx.fillText("🏪 STORE (Tap)", STORE_ZONE.x+36, STORE_ZONE.y+24);
+  ctx.fillStyle = "#9bb3d1"; ctx.font = "14px system-ui";
+  ctx.fillText("🏪 STORE (Tap)", STORE_ZONE.x+32, STORE_ZONE.y+24);
 
-  // trees
+  // Trees
   for (const tr of TREES){
     if (!tr.alive){
       ctx.fillStyle = "#3b2a1f";
       ctx.beginPath(); ctx.arc(tr.x, tr.y, TYPES[tr.type].radius*0.5, 0, Math.PI*2); ctx.fill();
       continue;
     }
-    ctx.fillStyle = "#5a3a28";
+    ctx.fillStyle = "#5a3a28"; // trunk
     ctx.beginPath(); ctx.arc(tr.x, tr.y+8, TYPES[tr.type].radius*0.45, 0, Math.PI*2); ctx.fill();
 
-    ctx.fillStyle = TYPES[tr.type].colorLeaf;
+    ctx.fillStyle = TYPES[tr.type].colorLeaf; // leaves
     ctx.beginPath(); ctx.arc(tr.x, tr.y, TYPES[tr.type].radius, 0, Math.PI*2); ctx.fill();
 
+    // HP bar
     const maxHp = TYPES[tr.type].maxHp;
-    const w = 40, h = 5, pct = Math.max(0, tr.hp)/maxHp;
+    const w = 44, h = 6, pct = Math.max(0, tr.hp)/maxHp;
     ctx.fillStyle = "rgba(0,0,0,0.35)";
-    ctx.fillRect(tr.x - w/2, tr.y - TYPES[tr.type].radius - 16, w, h);
+    ctx.fillRect(tr.x - w/2, tr.y - TYPES[tr.type].radius - 18, w, h);
     ctx.fillStyle = pct>0.5 ? "#8ef58e" : pct>0.25 ? "#ffd17a" : "#ff6b6b";
-    ctx.fillRect(tr.x - w/2, tr.y - TYPES[tr.type].radius - 16, w*pct, h);
+    ctx.fillRect(tr.x - w/2, tr.y - TYPES[tr.type].radius - 18, w*pct, h);
 
-    // selected ring if auto-chopping that tree
+    // Selected ring
     if (targetTree === tr){
       ctx.strokeStyle = "rgba(255,225,122,0.9)";
       ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(tr.x, tr.y, TYPES[tr.type].radius+6, 0, Math.PI*2); ctx.stroke();
     }
 
-    // type label
-    ctx.fillStyle = "#cfe1ff";
-    ctx.font = "bold 12px system-ui";
-    ctx.fillText(TYPES[tr.type].name, tr.x - ctx.measureText(TYPES[tr.type].name).width/2, tr.y + TYPES[tr.type].radius + 14);
+    // Label
+    ctx.fillStyle = "#cfe1ff"; ctx.font = "bold 12px system-ui";
+    const label = TYPES[tr.type].name;
+    ctx.fillText(label, tr.x - ctx.measureText(label).width/2, tr.y + TYPES[tr.type].radius + 14);
   }
 
-  // destination marker
+  // Destination marker
   if (moveTarget){
     ctx.strokeStyle = "rgba(122,199,255,0.9)";
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(moveTarget.x, moveTarget.y, 10, 0, Math.PI*2); ctx.stroke();
   }
 
-  // player
+  // Player
   ctx.fillStyle = "#5aa9ff";
   ctx.beginPath(); ctx.arc(player.x, player.y, player.r, 0, Math.PI*2); ctx.fill();
   ctx.fillStyle = "#0b1420";
@@ -292,6 +294,7 @@ function render(){
 
   renderFloaters();
 }
+
 function drawGrid(){
   ctx.fillStyle = "#0d1524";
   ctx.fillRect(0,0,WORLD.w,WORLD.h);
@@ -305,13 +308,17 @@ function drawGrid(){
   }
 }
 
-// ===== Store =====
+/* ---------- Store UI ---------- */
 const storeEl = document.getElementById("store");
 const axesEl  = document.getElementById("axes");
 document.getElementById("closeStore").onclick = () => toggleStore(false);
 document.getElementById("sellAll").onclick = sellAll;
-document.getElementById("quickStore")?.addEventListener("click", () => toggleStore(true));
-document.getElementById("quickSell")?.addEventListener("click", sellAll);
+document.getElementById("quickStore").addEventListener("click", () => toggleStore(true));
+document.getElementById("quickSell").addEventListener("click", sellAll);
+
+// backdrop click to close; Esc closes on desktop
+storeEl.addEventListener("pointerdown", (e) => { if (e.target === storeEl) toggleStore(false); });
+addEventListener("keydown", (e) => { if (e.key === "Escape") toggleStore(false); });
 
 function sellAll(){
   if (player.wood <= 0){ flashText("No wood to sell", player.x, player.y-24, "#ffd17a"); return; }
@@ -377,24 +384,31 @@ function refreshStore(){
   });
 }
 
-// ===== HUD =====
+/* ---------- Help / Guide ---------- */
+const guideEl = document.getElementById("guide");
+document.getElementById("helpBtn").addEventListener("click", () => guideEl.classList.remove("hidden"));
+document.getElementById("closeGuide").addEventListener("click", () => guideEl.classList.add("hidden"));
+// open guide on first load (per session)
+if (!sessionStorage.getItem("chop_seen_guide")){
+  guideEl.classList.remove("hidden");
+  sessionStorage.setItem("chop_seen_guide", "1");
+}
+guideEl.addEventListener("pointerdown", (e) => { if (e.target === guideEl) guideEl.classList.add("hidden"); });
+
+/* ---------- HUD ---------- */
 const woodEl = document.getElementById("wood");
 const goldEl = document.getElementById("gold");
 const axeEl  = document.getElementById("axe");
-const levelEl = document.getElementById("level");
-const xpEl = document.getElementById("xp");
-const xpNextEl = document.getElementById("xpNext");
+const levelEl= document.getElementById("level");
 function updateHUD(){
   woodEl.textContent = player.wood;
   goldEl.textContent = player.gold;
   axeEl.textContent  = AXES[player.axeTier].name;
-  levelEl.textContent = player.level;
-  xpEl.textContent = player.xp;
-  xpNextEl.textContent = player.xpNext;
+  levelEl.textContent= player.level;
 }
 updateHUD();
 
-// ===== Floaters =====
+/* ---------- Floaters ---------- */
 const floaters = [];
 function flashText(txt, x, y, color="#fff"){
   floaters.push({txt,x,y,vy:-0.25,life:900,color});
@@ -411,4 +425,17 @@ function renderFloaters(){
     ctx.globalAlpha = 1;
     if (f.life <= 0) floaters.splice(i,1);
   }
+}
+
+/* ---------- Helpers ---------- */
+function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+function pointInRect(x,y,r){ return x>r.x && x<r.x+r.w && y>r.y && y<r.y+r.h; }
+function treeAtPoint(x,y){
+  for (const tr of TREES){
+    if (!tr.alive) continue;
+    const rr = TYPES[tr.type].radius + 8;
+    const dx = x - tr.x, dy = y - tr.y;
+    if (dx*dx + dy*dy <= rr*rr) return tr;
+  }
+  return null;
 }
