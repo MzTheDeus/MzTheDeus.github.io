@@ -32,7 +32,7 @@ function resizeCanvas(){
   const availH = Math.max(320, window.innerHeight - headerPx() - reservedBottomPx());
 
   // Fit whole world
-  SCALE = Math.min(availW / WORLD_BASE.w, availH / WORLD_BASE.h, 1);
+  SCALE = Math.min(availW / WORLD_BASE.w, availH / WORLD_BASE.h, 1) * 1.3;
   DPR   = window.devicePixelRatio || 1;
 
   // CSS display size
