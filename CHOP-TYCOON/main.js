@@ -7,6 +7,8 @@
    ========================================================== */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d", { alpha:false });
+const axeSprite = new Image();
+axeSprite.src = "assets/axe.png";
 
 /* ---------- Portrait world & scaling ---------- */
 const WORLD_BASE = { w: 600, h: 900 };   // portrait
@@ -32,7 +34,7 @@ function resizeCanvas(){
   const availH = Math.max(320, window.innerHeight - headerPx() - reservedBottomPx());
 
   // Fit whole world
-  SCALE = Math.min(availW / WORLD_BASE.w, availH / WORLD_BASE.h, 1) * 1.3;
+  SCALE = Math.min(availW / WORLD_BASE.w, availH / WORLD_BASE.h, 1);
   DPR   = window.devicePixelRatio || 1;
 
   // CSS display size
@@ -76,14 +78,25 @@ const player = {
   wood: 0, gold: 0,
   axeTier: 0, nextChopAt: 0,
   level: 1, xp: 0, xpNext: 50,
+  swing: { active:false, start:0, duration:0, dir:1 },
 };
 const AXES = [
-  { name: "Wooden", power: 3,  cooldown: 700, price: 0,   minLevel: 1 },
-  { name: "Stone",  power: 5,  cooldown: 580, price: 20,  minLevel: 2 },
-  { name: "Bronze", power: 8,  cooldown: 500, price: 50,  minLevel: 3 },
-  { name: "Iron",   power: 12, cooldown: 420, price: 120, minLevel: 4 },
-  { name: "Steel",  power: 18, cooldown: 360, price: 240, minLevel: 5 },
+  { name:"Wooden", power:3,  cooldown:700, price:0,   minLevel:1, animMs:280, reach:22, color:"#8b5a2b", blade:"#d4d0c8", sprite:"assets/wood.png" },
+  { name:"Stone",  power:5,  cooldown:580, price:20,  minLevel:2, animMs:260, reach:24, color:"#6b7280", blade:"#d1d5db", sprite:"assets/stone.png"   },
+  { name:"Bronze", power:8,  cooldown:500, price:50,  minLevel:3, animMs:240, reach:26, color:"#b45309", blade:"#f59e0b", sprite:"assets/bronze.png"  },
+  { name:"Iron",   power:12, cooldown:420, price:120, minLevel:4, animMs:220, reach:28, color:"#9ca3af", blade:"#e5e7eb", sprite:"assets/iron.png"    },
+  { name:"Steel",  power:18, cooldown:360, price:240, minLevel:5, animMs:200, reach:30, color:"#94a3b8", blade:"#f8fafc", sprite:"assets/steel.png"   },
 ];
+
+// Preload axe images
+const AXE_SPRITES = AXES.map(ax => {
+  const img = new Image();
+  img.decoding = "async";
+  img.src = ax.sprite;
+  img.decode?.().catch(()=>{ /* ignore decode errors; draw will skip until ready */ });
+  return img;
+});
+
 
 /* ---------- Input: pointer (mouse + touch) ---------- */
 let moveTarget = null;     // {x,y}
@@ -138,6 +151,10 @@ requestAnimationFrame(loop);
 
 /* ---------- Update ---------- */
 function update(dt){
+  if (player.swing.active && performance.now() >= player.swing.start + player.swing.duration){
+  player.swing.active = false;
+}
+
   // Move
   if (moveTarget){
     const dx = moveTarget.x - player.x;
@@ -195,6 +212,14 @@ function tryChop(tr){
     player.nextChopAt = now + 350; return;
   }
 
+    {
+    const swingAxe = AXES[player.axeTier];
+    player.swing.active   = true;             // ADD
+    player.swing.start    = now;              // ADD
+    player.swing.duration = swingAxe.animMs || 240; // ADD
+    player.swing.dir      = Math.random() < 0.5 ? -1 : 1; // ADD
+  }
+
   tr.hp -= axe.power;
   player.nextChopAt = now + axe.cooldown;
 
@@ -202,7 +227,7 @@ function tryChop(tr){
     fellTree(tr);
     targetTree = null;
   } else {
-    flashText("-" + axe.power, tr.x, tr.y - 30, "#ffe17a");
+    flashText("-" + axe.power, tr.x, tr.y - 60, "#ffe17a");
   }
 }
 
@@ -291,6 +316,8 @@ function render(){
   ctx.beginPath(); ctx.arc(player.x, player.y, player.r, 0, Math.PI*2); ctx.fill();
   ctx.fillStyle = "#0b1420";
   ctx.beginPath(); ctx.arc(player.x + player.r*0.6, player.y-2, 2.5, 0, Math.PI*2); ctx.fill();
+
+  drawAxe();
 
   renderFloaters();
 }
@@ -438,4 +465,48 @@ function treeAtPoint(x,y){
     if (dx*dx + dy*dy <= rr*rr) return tr;
   }
   return null;
+}
+
+// Math helpers
+const TAU = Math.PI * 2;
+const rad = (deg) => deg * Math.PI / 180;
+const clamp01 = (v)=> Math.max(0, Math.min(1, v));
+const easeOutCubic = (t)=> 1 - Math.pow(1 - t, 3);
+
+// Player swing animation state
+
+
+// stop swing after its duration
+
+
+function drawAxe(){
+  if (!player.swing?.active) return;
+
+  const axe = AXES[player.axeTier];
+  const img = AXE_SPRITES[player.axeTier]; // pick correct sprite
+  if (!img || !img.complete) return;       // wait until loaded
+
+  // progress of swing (0→1)
+  const t = clamp01((performance.now() - player.swing.start) / (player.swing.duration || 240));
+  const p = easeOutCubic(t);
+
+  // swing from -80° to +40° (mirrored by dir)
+  const startA = rad(-80) * player.swing.dir;
+  const endA   = rad( 40) * player.swing.dir;
+  const swingA = startA + (endA - startA) * p;
+
+  const SPRITE_ALIGN = rad(-45);
+  const baseSize = 80;
+  const scale    = 0.9 + (axe.reach - 22) / 20;
+  const size     = baseSize * scale;
+
+  const gripX = 0.20 * size;
+  const gripY = 0.70 * size;
+
+  ctx.save();
+  ctx.translate(player.x, player.y);
+  ctx.rotate(swingA + SPRITE_ALIGN);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(img, -gripX, -gripY, size, size);
+  ctx.restore();
 }
