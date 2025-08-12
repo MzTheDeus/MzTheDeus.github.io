@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Chop Tycoon</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <canvas id="game" width="960" height="600"></canvas>
+
+  
+  <!-- Mobile quick actions (shown only on small screens) -->
+  <div id="quick">
+    <button id="quickStore" title="Open Store">🏪 Store</button>
+    <button id="quickSell" title="Sell All Wood">💰 Sell</button>
+  </div>
+
+
+  <!-- UI Overlay -->
+  <div id="hud">
+    <div>🪵 Wood: <span id="wood">0</span></div>
+    <div>🪙 Gold: <span id="gold">0</span></div>
+    <div>🪓 Axe: <span id="axe">Wooden</span></div>
+    <div>⭐ Level: <span id="level">1</span> <span class="muted">(XP <span id="xp">0</span>/<span id="xpNext">50</span>)</span></div>
+    <div class="hint">Click to move · Click a tree to chop (auto) · Click the shop to open/close</div>
+  </div>
+
+
+  <!-- Store panel -->
+  <div id="store" class="hidden">
+    <div class="panel">
+      <h2>🏪 General Store</h2>
+      <p class="muted">Sell wood and buy stronger axes.</p>
+
+      <div class="row">
+        <button id="sellAll">Sell all wood (+1 gold each)</button>
+      </div>
+
+      <h3>Axes</h3>
+      <div id="axes"></div>
+
+      <div class="row end">
+        <button id="closeStore">Close (E)</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>
