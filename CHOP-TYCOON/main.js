@@ -10,6 +10,15 @@ const ctx = canvas.getContext("2d", { alpha:false });
 const axeSprite = new Image();
 axeSprite.src = "assets/axe.png";
 
+// Player sprite (transparent PNG). Put at: ./assets/player.png
+const playerSprite = new Image();
+playerSprite.src = "assets/player.png";
+
+// Player visual sizing + where the "hand" is on the sprite (in sprite pixels)
+const PLAYER_BASE = 56;           // how big to draw the player sprite
+const HAND_OFFSET = { x: 10, y: 4 }; // hand position relative to sprite center (tweak per your art)
+
+
 /* ---------- Portrait world & scaling ---------- */
 const WORLD_BASE = { w: 600, h: 900 };   // portrait
 const WORLD = { w: 600, h: 900 };        // logic units
@@ -79,6 +88,8 @@ const player = {
   axeTier: 0, nextChopAt: 0,
   level: 1, xp: 0, xpNext: 50,
   swing: { active:false, start:0, duration:0, dir:1 },
+  facing: 1, // 1 = right, -1 = left
+  faceLockUntil: 0,
 };
 const AXES = [
   { name:"Wooden", power:3,  cooldown:700, price:0,   minLevel:1, animMs:280, reach:22, color:"#8b5a2b", blade:"#d4d0c8", sprite:"assets/wood.png" },
@@ -91,7 +102,9 @@ const AXES = [
 // Preload axe images
 const AXE_SPRITES = AXES.map(ax => {
   const img = new Image();
-  img.decoding = "async";
+  img.decoding = "sync";            // hint: decode sooner
+  img.loading = "eager";            // hint: fetch sooner
+  img.fetchPriority = "high";       // hint: prioritize
   img.src = ax.sprite;
   img.decode?.().catch(()=>{ /* ignore decode errors; draw will skip until ready */ });
   return img;
@@ -106,6 +119,7 @@ const CHOP_RANGE = 50;
 canvas.style.touchAction = "none";
 canvas.addEventListener("pointerdown", (e) => {
   const p = getCanvasPos(e);
+  setFacing(p.x - player.x);
 
   // Shop tap?
   if (pointInRect(p.x, p.y, STORE_ZONE)){
@@ -159,6 +173,7 @@ function update(dt){
   if (moveTarget){
     const dx = moveTarget.x - player.x;
     const dy = moveTarget.y - player.y;
+    setFacing(dx);
     const d = Math.hypot(dx,dy);
     if (d > 1){
       const step = player.speed;
@@ -171,19 +186,35 @@ function update(dt){
   player.x = clamp(player.x, player.r, WORLD.w - player.r);
   player.y = clamp(player.y, player.r, WORLD.h - player.r);
 
-  // Auto-chop
-  if (targetTree){
-    if (!targetTree.alive){
-      targetTree = null;
+// Auto-chop
+if (targetTree) {
+  if (!targetTree.alive) {
+    targetTree = null;
+  } else {
+    const dx = targetTree.x - player.x;
+    const dy = targetTree.y - player.y;
+    const dist = Math.hypot(dx, dy) || 0.0001; // avoid divide-by-zero
+
+    // Stop just outside the tree’s edge
+    const stopDist = targetTree.r + player.r + 4; // a touch more gap feels nicer
+
+    if (dist > stopDist + STOP_EPS) {
+      // Move to the exact stop point (on the line from tree -> player)
+      const nx = dx / dist, ny = dy / dist;
+      const tx = targetTree.x - nx * stopDist;
+      const ty = targetTree.y - ny * stopDist;
+      moveTarget = { x: tx, y: ty };
+
+      // Face while approaching (with hysteresis)
+      setFacing(dx);
     } else {
-      const d2 = (player.x - targetTree.x) ** 2 + (player.y - targetTree.y) ** 2;
-      if (d2 > CHOP_RANGE * CHOP_RANGE){
-        moveTarget = { x: targetTree.x, y: targetTree.y };
-      } else {
-        tryChop(targetTree);
-      }
+      // In range: stop moving, face the tree, chop
+      moveTarget = null;
+      setFacing(dx);
+      tryChop(targetTree);
     }
   }
+}
 
   // Respawn
   const now = performance.now();
@@ -218,7 +249,11 @@ function tryChop(tr){
     player.swing.start    = now;              // ADD
     player.swing.duration = swingAxe.animMs || 240; // ADD
     player.swing.dir      = Math.random() < 0.5 ? -1 : 1; // ADD
+
+    player.faceLockUntil = now + (player.swing.duration || 240) + 80; // lock until swing ends (+80ms)
   }
+
+
 
   tr.hp -= axe.power;
   player.nextChopAt = now + axe.cooldown;
@@ -312,11 +347,10 @@ function render(){
   }
 
   // Player
-  ctx.fillStyle = "#5aa9ff";
-  ctx.beginPath(); ctx.arc(player.x, player.y, player.r, 0, Math.PI*2); ctx.fill();
-  ctx.fillStyle = "#0b1420";
-  ctx.beginPath(); ctx.arc(player.x + player.r*0.6, player.y-2, 2.5, 0, Math.PI*2); ctx.fill();
 
+
+
+  drawPlayer();
   drawAxe();
 
   renderFloaters();
@@ -396,19 +430,30 @@ function refreshStore(){
     axesEl.appendChild(card);
   });
 
-  axesEl.querySelectorAll("button.buy").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const idx = +btn.dataset.idx;
-      const ax = AXES[idx];
-      if (player.gold >= ax.price && player.level >= ax.minLevel && idx === player.axeTier + 1){
-        player.gold -= ax.price;
-        player.axeTier = idx;
-        flashText(`Bought ${ax.name}!`, player.x, player.y-26, "#8ef58e");
-        updateHUD();
-        refreshStore();
+axesEl.querySelectorAll("button.buy").forEach(btn => {
+  btn.addEventListener("click", async () => {
+    const idx = +btn.dataset.idx;
+    const ax = AXES[idx];
+    if (player.gold >= ax.price && player.level >= ax.minLevel && idx === player.axeTier + 1) {
+      player.gold -= ax.price;
+
+      // Warm the sprite before equipping to avoid first-swing lag
+      const img = AXE_SPRITES[idx];
+      try {
+        if (img && (!img.complete || !img.naturalWidth) && img.decode) {
+          await img.decode();
+        }
+      } catch (e) {
+        // ignore decode failures; drawAxe() will guard if not ready
       }
-    });
+
+      player.axeTier = idx;
+      flashText(`Bought ${ax.name}!`, player.x, player.y - 26, "#8ef58e");
+      updateHUD();
+      refreshStore();
+    }
   });
+});
 }
 
 /* ---------- Help / Guide ---------- */
@@ -504,9 +549,48 @@ function drawAxe(){
   const gripY = 0.70 * size;
 
   ctx.save();
-  ctx.translate(player.x, player.y);
+    // Move to the player's hand (offset flips with facing)
+  ctx.translate(
+    player.x + HAND_OFFSET.x * player.facing,
+    player.y + HAND_OFFSET.y
+  );
+  // Flip first, so rotation is mirrored naturally
+  ctx.scale(player.facing, 1);
   ctx.rotate(swingA + SPRITE_ALIGN);
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(img, -gripX, -gripY, size, size);
   ctx.restore();
+}
+
+function drawPlayer(){
+  if (!playerSprite.complete || !playerSprite.naturalWidth){
+    // fallback dot while loading
+    ctx.fillStyle = "#5aa9ff";
+    ctx.beginPath(); ctx.arc(player.x, player.y, player.r, 0, Math.PI*2); ctx.fill();
+    return;
+  }
+
+  const size = PLAYER_BASE; // scale this up/down to change character size
+  const half = size / 2;
+
+  ctx.save();
+  // Move to player
+  ctx.translate(player.x, player.y);
+  // Flip horizontally if facing left
+  ctx.scale(player.facing, 1);
+
+  // Draw centered on the player
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(playerSprite, -half, -half, size, size);
+
+  ctx.restore();
+}
+
+const FACE_EPS = 1.5;   // need at least this many px to change facing
+const STOP_EPS = 0.75;  // deadzone around stop distance to avoid oscillation
+
+function setFacing(dx){
+  if (performance.now() < player.faceLockUntil) return; // locked during swing
+  if (dx > FACE_EPS)      player.facing = 1;
+  else if (dx < -FACE_EPS) player.facing = -1;
 }
