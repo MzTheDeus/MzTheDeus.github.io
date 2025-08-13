@@ -7,8 +7,6 @@
    ========================================================== */
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d", { alpha:false });
-const axeSprite = new Image();
-axeSprite.src = "assets/axe.png";
 
 // Player sprite (transparent PNG). Put at: ./assets/player.png
 const playerSprite = new Image();
@@ -75,21 +73,57 @@ function getCanvasPos(evt){
 
 /* ---------- Game data ---------- */
 const TYPES = {
-  pine: { name:"Pine", radius:22, maxHp:24, yieldMin:8,  yieldMax:12, colorLeaf:"#2f7a45", reqLevel:1, xpGain:10 },
-  oak:  { name:"Oak",  radius:26, maxHp:46, yieldMin:16, yieldMax:22, colorLeaf:"#2a6a2f", reqLevel:3, xpGain:25 },
+  pine:  { name:"Pine",  radius:22, maxHp:24,  yieldMin:8,  yieldMax:12, reqLevel:1, xpGain:10,
+           sprite:"assets/trees/pine.png",   stump:"assets/trees/stump.png",   spriteW:72, spriteH:82, basePad:30 },
+  oak:   { name:"Oak",   radius:26, maxHp:46,  yieldMin:16, yieldMax:22, reqLevel:3, xpGain:25,
+           sprite:"assets/trees/oak.png",    stump:"assets/trees/stump.png",   spriteW:84, spriteH:96, basePad:36 },
+  birch: { name:"Birch", radius:24, maxHp:70,  yieldMin:22, yieldMax:30, reqLevel:5, xpGain:45,
+           sprite:"assets/trees/birch.png",  stump:"assets/trees/stump.png",   spriteW:70, spriteH:86, basePad:33 },
+  maple: { name:"Maple", radius:28, maxHp:110, yieldMin:30, yieldMax:40, reqLevel:7, xpGain:70,
+           sprite:"assets/trees/maple.png",  stump:"assets/trees/stump.png",   spriteW:90, spriteH:104, basePad:39 },
 };
 const TREES = [];
 const TREE_RESPAWN_MS = 12000;
-const STORE_ZONE = { x: 390, y: 740, w: 170, h: 110 }; // bottom-right area in portrait
+
+/* ---------- Tree sprite preload ---------- */
+const TREE_SPRITES = {};
+const STUMP_SPRITES = {};
+const TREE_SCALE = 2.4; // 1.0 = original size, >1.0 = bigger
+
+
+for (const [key, t] of Object.entries(TYPES)) {
+  // full tree
+  if (t.sprite){
+    const img = new Image();
+    img.loading = "eager";
+    img.decoding = "async";
+    img.src = t.sprite;
+    img.decode?.().catch(()=>{});
+    TREE_SPRITES[key] = img;
+  }
+  // stump (can be shared)
+  if (t.stump){
+    if (!STUMP_SPRITES[t.stump]) {
+      const s = new Image();
+      s.loading = "eager";
+      s.decoding = "async";
+      s.src = t.stump;
+      s.decode?.().catch(()=>{});
+      STUMP_SPRITES[t.stump] = s;
+    }
+  }
+}
 
 const player = {
-  x: 120, y: 180, r: 14, speed: 3.2,
+  x: 120, y: 180, r: 14, speed: 0.5,
   wood: 0, gold: 0,
-  axeTier: 0, nextChopAt: 0,
+  axeTier: 0, shoeTier: 0, nextChopAt: 0,
   level: 1, xp: 0, xpNext: 50,
   swing: { active:false, start:0, duration:0, dir:1 },
   facing: 1, // 1 = right, -1 = left
   faceLockUntil: 0,
+  levelPulseUntil: 0,
+
 };
 const AXES = [
   { name:"Wooden", power:3,  cooldown:700, price:0,   minLevel:1, animMs:280, reach:22, color:"#8b5a2b", blade:"#d4d0c8", sprite:"assets/wood.png" },
@@ -98,6 +132,23 @@ const AXES = [
   { name:"Iron",   power:12, cooldown:420, price:120, minLevel:4, animMs:220, reach:28, color:"#9ca3af", blade:"#e5e7eb", sprite:"assets/iron.png"    },
   { name:"Steel",  power:18, cooldown:360, price:240, minLevel:5, animMs:200, reach:30, color:"#94a3b8", blade:"#f8fafc", sprite:"assets/steel.png"   },
 ];
+
+const SHOES = [
+  { name: "Barefoot",      speed: 0.5, price: 0,   minLevel: 1 },
+  { name: "Leather Shoes", speed: 0.8, price: 50,  minLevel: 2 },
+  { name: "Running Shoes", speed: 1.2, price: 120, minLevel: 3 },
+  { name: "Speed Boots",   speed: 2.2, price: 250, minLevel: 4 },
+];
+
+// Win-state + timer
+const GAME = { startAt: performance.now(), over: false };
+
+// format mm:ss
+function formatTime(ms){
+  const s = Math.floor(ms/1000);
+  const m = Math.floor(s/60);
+  return `${m}:${String(s%60).padStart(2,'0')}`;
+}
 
 // Preload axe images
 const AXE_SPRITES = AXES.map(ax => {
@@ -114,18 +165,18 @@ const AXE_SPRITES = AXES.map(ax => {
 /* ---------- Input: pointer (mouse + touch) ---------- */
 let moveTarget = null;     // {x,y}
 let targetTree = null;     // tree to auto-chop
-const CHOP_RANGE = 50;
+const CHOP_RANGE = 55;
+const CLIP_INSET = 3;
+const REACH_SLACK = 8;
+const XP_BAR = { h: 14, pad: 8 }; // height and margin from edges
+
 
 canvas.style.touchAction = "none";
 canvas.addEventListener("pointerdown", (e) => {
+  if (GAME.over) return;  // prevent clicks after game ends
   const p = getCanvasPos(e);
   setFacing(p.x - player.x);
 
-  // Shop tap?
-  if (pointInRect(p.x, p.y, STORE_ZONE)){
-    toggleStore(storeEl.classList.contains("hidden"));
-    return;
-  }
 
   // Tree tap?
   const tr = treeAtPoint(p.x, p.y);
@@ -146,13 +197,26 @@ function makeTree(x, y, type) {
   const t = TYPES[type];
   return { type, x, y, r: t.radius, hp: t.maxHp, alive: true, respawnAt: 0 };
 }
-// Layout: 5 trees, spaced for portrait
+// Layout: 10 trees, spaced for portrait
+TREES.length = 0;
 [
-  { x: 140, y: 260, type: "pine" },
-  { x: 300, y: 360, type: "oak"  },
-  { x: 460, y: 260, type: "pine" },
-  { x: 200, y: 520, type: "pine" },
-  { x: 420, y: 520, type: "oak"  },
+  // Top cluster
+  { x: 120, y: 180, type: "pine"  },
+  { x: 300, y: 170, type: "oak"   },
+  { x: 480, y: 190, type: "birch" },
+
+  // Upper mid
+  { x: 180, y: 320, type: "pine"  },
+  { x: 360, y: 320, type: "oak"   },
+
+  // Center band
+  { x: 100, y: 460, type: "birch" },
+  { x: 300, y: 470, type: "pine"  },
+  { x: 500, y: 460, type: "maple" },
+
+  // Lower (avoid store zone: x:390–560, y:740–850)
+  { x: 160, y: 640, type: "oak"   },
+  { x: 320, y: 650, type: "maple" },
 ].forEach(s => TREES.push(makeTree(s.x, s.y, s.type)));
 
 /* ---------- Main loop ---------- */
@@ -165,6 +229,7 @@ requestAnimationFrame(loop);
 
 /* ---------- Update ---------- */
 function update(dt){
+  if (GAME.over) return;
   if (player.swing.active && performance.now() >= player.swing.start + player.swing.duration){
   player.swing.active = false;
 }
@@ -196,7 +261,7 @@ if (targetTree) {
     const dist = Math.hypot(dx, dy) || 0.0001; // avoid divide-by-zero
 
     // Stop just outside the tree’s edge
-    const stopDist = targetTree.r + player.r + 4; // a touch more gap feels nicer
+    const stopDist = Math.max(0, targetTree.r + player.r - CLIP_INSET);
 
     if (dist > stopDist + STOP_EPS) {
       // Move to the exact stop point (on the line from tree -> player)
@@ -208,11 +273,13 @@ if (targetTree) {
       // Face while approaching (with hysteresis)
       setFacing(dx);
     } else {
-      // In range: stop moving, face the tree, chop
-      moveTarget = null;
-      setFacing(dx);
-      tryChop(targetTree);
-    }
+  // In range (with a little slack): stop moving, face the tree, chop
+  if (dist <= stopDist + REACH_SLACK) {
+    moveTarget = null;
+    setFacing(dx);
+    tryChop(targetTree);
+  }
+}
   }
 }
 
@@ -224,6 +291,7 @@ if (targetTree) {
       flashText(`${TYPES[tr.type].name} regrew 🌳`, tr.x, tr.y - 40, "#9bd0ff");
     }
   }
+  updateFireworks(dt);
 }
 
 /* ---------- Chop logic ---------- */
@@ -287,57 +355,142 @@ function gainXp(amount){
     player.level++;
     player.xpNext = Math.floor(player.xpNext * 1.35);
     flashText(`Level Up! ★${player.level}`, player.x, player.y - 64, "#ffd17a");
+    // Fireworks bursts slightly above the head
+    const burstY = player.y - (PLAYER_BASE ? PLAYER_BASE/2 : 20) - 6;
+    spawnFireworks(player.x, burstY, 26);
+    setTimeout(() => spawnFireworks(player.x, burstY - 8, 22), 90);
+    setTimeout(() => spawnFireworks(player.x, burstY + 6, 18), 180);
+    player.levelPulseUntil = performance.now() + 900;
+
+
+    // (optional) a tiny haptic tap on mobile
+    if (navigator.vibrate) navigator.vibrate(20);
+
   }
   updateHUD();
   refreshStore();
+
+    // Win condition
+  if (!GAME.over && player.level >= 10) {
+    endGame();
+  }
 }
+
+function endGame(){
+  GAME.over = true;
+  moveTarget = null;
+  targetTree = null;
+  const ms = performance.now() - GAME.startAt;
+  winTimeEl.textContent = formatTime(ms);
+  winEl.classList.remove("hidden");
+}
+
 
 /* ---------- Render ---------- */
 function render(){
   ctx.clearRect(0,0,WORLD.w,WORLD.h);
   drawGrid();
 
+  function drawXPBar(){
+  const isMax = player.level >= 10 || GAME.over;
+  const x = XP_BAR.pad;
+  const w = WORLD.w - XP_BAR.pad * 2;
+  const y = WORLD.h - XP_BAR.h - XP_BAR.pad;
+  const h = XP_BAR.h;
+
+  // background
+  ctx.fillStyle = "rgba(0,0,0,0.35)";
+  ctx.fillRect(x, y, w, h);
+
+  // fill
+  const pct = isMax ? 1 : Math.max(0, Math.min(1, player.xp / player.xpNext));
+  ctx.fillStyle = pct > 0.66 ? "#8ef58e" : pct > 0.33 ? "#ffd17a" : "#ff9b7a";
+  ctx.fillRect(x, y, w * pct, h);
+
+  // border
+  ctx.strokeStyle = "rgba(255,255,255,0.15)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+
+  // text
+  ctx.fillStyle = "#cfe1ff";
+  ctx.font = "bold 12px system-ui";
+  const label = isMax
+    ? `Lv ${player.level} — MAX`
+    : `Lv ${player.level} · ${player.xp}/${player.xpNext} XP`;
+  const tw = ctx.measureText(label).width;
+  ctx.fillText(label, x + (w - tw) / 2, y - 4); // text just above the bar
+}
+
+
   // Store zone (bottom-right)
+  /*
   ctx.fillStyle = "rgba(90,169,255,0.12)";
   ctx.fillRect(STORE_ZONE.x, STORE_ZONE.y, STORE_ZONE.w, STORE_ZONE.h);
   ctx.strokeStyle = "rgba(90,169,255,0.6)";
   ctx.strokeRect(STORE_ZONE.x+0.5, STORE_ZONE.y+0.5, STORE_ZONE.w-1, STORE_ZONE.h-1);
   ctx.fillStyle = "#9bb3d1"; ctx.font = "14px system-ui";
   ctx.fillText("🏪 STORE (Tap)", STORE_ZONE.x+32, STORE_ZONE.y+24);
+  */
 
-  // Trees
-  for (const tr of TREES){
-    if (!tr.alive){
-      ctx.fillStyle = "#3b2a1f";
-      ctx.beginPath(); ctx.arc(tr.x, tr.y, TYPES[tr.type].radius*0.5, 0, Math.PI*2); ctx.fill();
-      continue;
+// Trees
+for (const tr of TREES){
+  const tt = TYPES[tr.type];
+
+  if (!tr.alive){
+    // draw stump if available; else small brown circle
+    if (tt.stump) {
+      const stumpImg = STUMP_SPRITES[tt.stump];
+      if (stumpImg && stumpImg.complete) {
+        const w = Math.round(tt.spriteW * 0.55 * TREE_SCALE);
+        const h = Math.round(tt.spriteH * 0.35 * TREE_SCALE);
+        ctx.drawImage(stumpImg, tr.x - w/2, tr.y - h/2 + 6, w, h);
+      } else {
+        ctx.fillStyle = "#3b2a1f";
+        ctx.beginPath(); ctx.arc(tr.x, tr.y, tt.radius*0.5, 0, Math.PI*2); ctx.fill();
+      }
     }
-    ctx.fillStyle = "#5a3a28"; // trunk
-    ctx.beginPath(); ctx.arc(tr.x, tr.y+8, TYPES[tr.type].radius*0.45, 0, Math.PI*2); ctx.fill();
-
-    ctx.fillStyle = TYPES[tr.type].colorLeaf; // leaves
-    ctx.beginPath(); ctx.arc(tr.x, tr.y, TYPES[tr.type].radius, 0, Math.PI*2); ctx.fill();
-
-    // HP bar
-    const maxHp = TYPES[tr.type].maxHp;
-    const w = 44, h = 6, pct = Math.max(0, tr.hp)/maxHp;
-    ctx.fillStyle = "rgba(0,0,0,0.35)";
-    ctx.fillRect(tr.x - w/2, tr.y - TYPES[tr.type].radius - 18, w, h);
-    ctx.fillStyle = pct>0.5 ? "#8ef58e" : pct>0.25 ? "#ffd17a" : "#ff6b6b";
-    ctx.fillRect(tr.x - w/2, tr.y - TYPES[tr.type].radius - 18, w*pct, h);
-
-    // Selected ring
-    if (targetTree === tr){
-      ctx.strokeStyle = "rgba(255,225,122,0.9)";
-      ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(tr.x, tr.y, TYPES[tr.type].radius+6, 0, Math.PI*2); ctx.stroke();
-    }
-
-    // Label
-    ctx.fillStyle = "#cfe1ff"; ctx.font = "bold 12px system-ui";
-    const label = TYPES[tr.type].name;
-    ctx.fillText(label, tr.x - ctx.measureText(label).width/2, tr.y + TYPES[tr.type].radius + 14);
+    continue;
   }
+
+  // draw tree sprite
+  const img = TREE_SPRITES[tr.type];
+  if (img && img.complete){
+    const w = tt.spriteW * TREE_SCALE;
+    const h = tt.spriteH * TREE_SCALE;
+    // anchor the sprite so its bottom center is at (tr.x, tr.y + basePad)
+    const drawX = tr.x - w/2;
+    const drawY = tr.y - h + tt.basePad * TREE_SCALE;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(img, drawX, drawY, w, h);
+  } else {
+    // fallback while loading: simple placeholder
+    ctx.fillStyle = "#5a3a28";
+    ctx.beginPath(); ctx.arc(tr.x, tr.y+8, tt.radius*0.45, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#2f7a45";
+    ctx.beginPath(); ctx.arc(tr.x, tr.y, tt.radius, 0, Math.PI*2); ctx.fill();
+  }
+
+  // HP bar
+  const maxHp = tt.maxHp;
+  const barW = 44, barH = 6, pct = Math.max(0, tr.hp)/maxHp;
+  ctx.fillStyle = "rgba(0,0,0,0.35)";
+  ctx.fillRect(tr.x - barW/2, tr.y - tt.radius - 55, barW, barH);
+  ctx.fillStyle = pct>0.5 ? "#8ef58e" : pct>0.25 ? "#ffd17a" : "#ff6b6b";
+  ctx.fillRect(tr.x - barW/2, tr.y - tt.radius - 55, barW*pct, barH);
+
+  // Selected ring (optional)
+  if (targetTree === tr){
+    ctx.strokeStyle = "rgba(255,225,122,0.9)";
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(tr.x, tr.y, tt.radius+6, 0, Math.PI*2); ctx.stroke();
+  }
+
+  // Label (optional)
+  ctx.fillStyle = "#cfe1ff"; ctx.font = "bold 12px system-ui";
+  const label = tt.name;
+  ctx.fillText(label, tr.x - ctx.measureText(label).width/2, tr.y + tt.radius + 14);
+}
 
   // Destination marker
   if (moveTarget){
@@ -350,9 +503,11 @@ function render(){
 
 
 
+
   drawPlayer();
   drawAxe();
-
+  renderFireworks();
+  drawXPBar();
   renderFloaters();
 }
 
@@ -376,6 +531,11 @@ document.getElementById("closeStore").onclick = () => toggleStore(false);
 document.getElementById("sellAll").onclick = sellAll;
 document.getElementById("quickStore").addEventListener("click", () => toggleStore(true));
 document.getElementById("quickSell").addEventListener("click", sellAll);
+
+// Win modal DOM
+const winEl = document.getElementById("win");
+const winTimeEl = document.getElementById("winTime");
+document.getElementById("again").onclick = () => location.reload();
 
 // backdrop click to close; Esc closes on desktop
 storeEl.addEventListener("pointerdown", (e) => { if (e.target === storeEl) toggleStore(false); });
@@ -401,6 +561,8 @@ function toggleStore(open){
 
 function refreshStore(){
   axesEl.innerHTML = "";
+
+  // --- Axes section ---
   AXES.forEach((ax, idx) => {
     const owned = idx <= player.axeTier;
     const canBuyGold = player.gold >= ax.price;
@@ -421,7 +583,7 @@ function refreshStore(){
       <div class="row">
         ${owned ? `<span class="muted">Owned</span>` :
           nextNeeded
-            ? `<button class="buy ${canBuyGold && meetsLevel ? 'afford' : ''}" data-idx="${idx}" ${(!canBuyGold || !meetsLevel) ? 'disabled' : ''}>
+            ? `<button class="buy-axe ${canBuyGold && meetsLevel ? 'afford' : ''}" data-idx="${idx}" ${(!canBuyGold || !meetsLevel) ? 'disabled' : ''}>
                  ${meetsLevel ? 'Buy' : 'Need Lv ' + ax.minLevel}
                </button>`
             : `<span class="muted">Buy previous tier first</span>`}
@@ -430,30 +592,69 @@ function refreshStore(){
     axesEl.appendChild(card);
   });
 
-axesEl.querySelectorAll("button.buy").forEach(btn => {
-  btn.addEventListener("click", async () => {
-    const idx = +btn.dataset.idx;
-    const ax = AXES[idx];
-    if (player.gold >= ax.price && player.level >= ax.minLevel && idx === player.axeTier + 1) {
-      player.gold -= ax.price;
+  // --- Shoes section ---
+  SHOES.forEach((sh, idx) => {
+    const owned = idx <= player.shoeTier;
+    const canBuyGold = player.gold >= sh.price;
+    const meetsLevel = player.level >= sh.minLevel;
+    const nextNeeded = idx === player.shoeTier + 1;
 
-      // Warm the sprite before equipping to avoid first-swing lag
-      const img = AXE_SPRITES[idx];
-      try {
-        if (img && (!img.complete || !img.naturalWidth) && img.decode) {
-          await img.decode();
-        }
-      } catch (e) {
-        // ignore decode failures; drawAxe() will guard if not ready
-      }
-
-      player.axeTier = idx;
-      flashText(`Bought ${ax.name}!`, player.x, player.y - 26, "#8ef58e");
-      updateHUD();
-      refreshStore();
-    }
+    const card = document.createElement("div");
+    card.className = "card";
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+        <div>
+          <div style="font-weight:800">👟 ${sh.name}</div>
+          <div class="muted">Speed: ${sh.speed.toFixed(1)}</div>
+          <div class="muted">Req: Lv ${sh.minLevel}</div>
+        </div>
+        <div class="price">${sh.price}g</div>
+      </div>
+      <div class="row">
+        ${owned ? `<span class="muted">Owned</span>` :
+          nextNeeded
+            ? `<button class="buy-shoe ${canBuyGold && meetsLevel ? 'afford' : ''}" data-idx="${idx}" ${(!canBuyGold || !meetsLevel) ? 'disabled' : ''}>
+                 ${meetsLevel ? 'Buy' : 'Need Lv ' + sh.minLevel}
+               </button>`
+            : `<span class="muted">Buy previous tier first</span>`}
+      </div>
+    `;
+    axesEl.appendChild(card);
   });
-});
+
+  // --- Axe buy buttons ---
+  axesEl.querySelectorAll("button.buy-axe").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const idx = +btn.dataset.idx;
+      const ax = AXES[idx];
+      if (player.gold >= ax.price && player.level >= ax.minLevel && idx === player.axeTier + 1){
+        player.gold -= ax.price;
+        // Preload axe sprite to avoid lag
+        const img = AXE_SPRITES[idx];
+        try { if (img && (!img.complete || !img.naturalWidth)) await img.decode(); } catch {}
+        player.axeTier = idx;
+        flashText(`Bought ${ax.name}!`, player.x, player.y-26, "#8ef58e");
+        updateHUD();
+        refreshStore();
+      }
+    });
+  });
+
+  // --- Shoe buy buttons ---
+  axesEl.querySelectorAll("button.buy-shoe").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = +btn.dataset.idx;
+      const sh = SHOES[idx];
+      if (player.gold >= sh.price && player.level >= sh.minLevel && idx === player.shoeTier + 1){
+        player.gold -= sh.price;
+        player.shoeTier = idx;
+        player.speed = sh.speed;
+        flashText(`Bought ${sh.name}!`, player.x, player.y-26, "#8ef58e");
+        updateHUD();
+        refreshStore();
+      }
+    });
+  });
 }
 
 /* ---------- Help / Guide ---------- */
@@ -477,6 +678,8 @@ function updateHUD(){
   goldEl.textContent = player.gold;
   axeEl.textContent  = AXES[player.axeTier].name;
   levelEl.textContent= player.level;
+  axeEl.textContent  = AXES[player.axeTier].name + " / " + SHOES[player.shoeTier].name;
+
 }
 updateHUD();
 
@@ -564,26 +767,30 @@ function drawAxe(){
 
 function drawPlayer(){
   if (!playerSprite.complete || !playerSprite.naturalWidth){
-    // fallback dot while loading
     ctx.fillStyle = "#5aa9ff";
     ctx.beginPath(); ctx.arc(player.x, player.y, player.r, 0, Math.PI*2); ctx.fill();
     return;
   }
 
-  const size = PLAYER_BASE; // scale this up/down to change character size
+  const size = PLAYER_BASE;
   const half = size / 2;
 
+  // Draw the player sprite (affected by facing flip)
   ctx.save();
-  // Move to player
   ctx.translate(player.x, player.y);
-  // Flip horizontally if facing left
   ctx.scale(player.facing, 1);
-
-  // Draw centered on the player
   ctx.imageSmoothingEnabled = false;
   ctx.drawImage(playerSprite, -half, -half, size, size);
-
   ctx.restore();
+
+// Draw the level text (not affected by facing flip)
+const pulsing = performance.now() < (player.levelPulseUntil || 0);
+const fontSize = pulsing ? 16 : 14;
+ctx.fillStyle = "#ffd17a";
+ctx.font = `bold ${fontSize}px system-ui`;
+const lvlText = `Lv ${player.level}`;
+ctx.fillText(lvlText, player.x - ctx.measureText(lvlText).width / 2, player.y - half - 6);
+
 }
 
 const FACE_EPS = 1.5;   // need at least this many px to change facing
@@ -593,4 +800,57 @@ function setFacing(dx){
   if (performance.now() < player.faceLockUntil) return; // locked during swing
   if (dx > FACE_EPS)      player.facing = 1;
   else if (dx < -FACE_EPS) player.facing = -1;
+}
+
+/* ---------- Fireworks (level-up) ---------- */
+const fireworks = [];
+const FW_COLORS = ["#ffd17a", "#8ef58e", "#9bd0ff", "#ff9bd4", "#ffe17a"];
+
+function spawnFireworks(x, y, count = 26, spread = Math.PI * 2){
+  for (let i = 0; i < count; i++){
+    const ang = Math.random() * spread;
+    const spd = 1.6 + Math.random() * 2.2;   // initial speed
+    fireworks.push({
+      x, y,
+      vx: Math.cos(ang) * spd,
+      vy: Math.sin(ang) * spd - 0.3,         // slight upward bias
+      life: 650 + Math.random() * 250,       // ms
+      max: 700,
+      size: 2 + Math.random() * 2,
+      color: FW_COLORS[(Math.random() * FW_COLORS.length) | 0],
+    });
+  }
+}
+
+function updateFireworks(dt){
+  for (let i = fireworks.length - 1; i >= 0; i--){
+    const p = fireworks[i];
+    p.life -= dt;
+    if (p.life <= 0){ fireworks.splice(i, 1); continue; }
+    // motion
+    p.x += p.vx;
+    p.y += p.vy;
+    // gravity + drag
+    p.vy += 0.04;
+    p.vx *= 0.985;
+    p.vy *= 0.985;
+  }
+}
+
+function renderFireworks(){
+  if (!fireworks.length) return;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter"; // pretty glow
+  for (const p of fireworks){
+    const a = Math.max(0, p.life / p.max);  // fade
+    ctx.globalAlpha = a * 0.9;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
+
 }

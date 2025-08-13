@@ -9,10 +9,10 @@
 <body>
   <!-- Top header / HUD -->
   <header id="topbar">
-    <div class="stat">🪵 <span id="wood">0</span></div>
-    <div class="stat">🪙 <span id="gold">0</span></div>
+    <div class="stat">🪵 Wood <span id="wood">0</span></div>
+    <div class="stat">🪙 Coins <span id="gold">0</span></div>
     <div class="stat">🪓 <span id="axe">Wooden</span></div>
-    <div class="stat">⭐ <span id="level">1</span></div>
+    <div class="stat">⭐ Level <span id="level">1</span></div>
     <button id="helpBtn" class="ghost">❓ Help</button>
   </header>
 
@@ -43,6 +43,15 @@
       </div>
     </div>
   </div>
+
+  <!-- Win modal -->
+<div id="win" class="modal hidden">
+  <div class="panel">
+    <h2>🎉 You reached Lv 10!</h2>
+    <p>Time: <strong id="winTime">00:00</strong></p>
+    <button id="again">Play again</button>
+  </div>
+</div>
 
   <!-- Help / Guide panel (auto-opens on first load) -->
   <div id="guide" class="overlay hidden">
