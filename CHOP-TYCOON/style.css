@@ -83,3 +83,13 @@ body { padding-bottom: var(--safe-bottom); }
   margin-top: 40px; /* pushes the game canvas down */
 }
 }
+/* Only on narrow viewports */
+@media (max-width: 530px) {
+  #topbar {
+    position: sticky;
+    top: 0;
+    z-index: 10; /* keep above canvas */
+  }
+  /* No extra margin needed */
+  #game { margin-top: 0 !important; }
+}
