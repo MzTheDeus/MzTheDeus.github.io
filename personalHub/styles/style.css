@@ -1,0 +1,79 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Oswald;
+}
+
+
+body, html {
+    background-color: #2d3250;
+    height: 100%;
+      /* The image used */
+  background-image: url("/personalHub/images/bodyback.webp");
+
+  /* Full height */
+  height: 100%;
+
+  /* Center and scale the image nicely */
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+
+.main-container {
+    color: #2d3250;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+}
+
+.profile-pic {
+    width: 100px;
+    border-radius: 150px;
+}
+
+
+.links {
+}
+
+.main-card {
+    background-color: #424769e7;
+    border-radius: 15px;
+    padding: 35px 35px;
+    margin-top: 125px;
+
+}
+
+.header-pic {
+    margin: 5px 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    color: #ffffff;
+    font-style: italic;
+    font-weight: 700;
+}
+
+img {
+    box-shadow: #676f9d 0px 0px 10px;
+}
+
+
+
+
+
+li {
+    color: #ffffff;
+    margin: 15px;
+    background-color: #676f9dc7;
+    list-style: none;
+    text-align: center;
+    border-radius: 150px;
+    padding: 15px 35px;
+    font-size: 20px;
+    font-weight: 600;
+}
