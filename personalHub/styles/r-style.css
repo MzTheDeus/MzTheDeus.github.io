@@ -2,6 +2,11 @@
     padding: 0;
     margin: 0;
     box-sizing: border-box;
+    
+}
+
+html {
+  
 }
 
 
@@ -32,11 +37,12 @@ header {
     align-items: center;
     justify-content: center;
     gap: 15px;
+    text-align: center;
 }
 
 h1 {
     font-size: 28px;
-    text-align: center;
+    
 }
 
 h2 {
@@ -116,3 +122,54 @@ svg {
   color: #6b7280;
   font-size: 14px;
 }
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+@media (min-width: 768px) {
+  header {
+    flex-direction: row;
+    text-align: left;
+  }
+  h1 { font-size: 32px; }
+  h2 { font-size: 22px; }
+  body { font-size: 18px; }
+  .work-exp {
+    margin-top: 60px;
+  }
+
+  .card {
+    
+  }
+  .work-grid {
+    display: flex;
+  }
+
+  .work-container {
+    padding-right: 15px;
+  }
+  .projects {
+    margin-top: 60px
+  }
+  .project-container {
+    display: flex;
+    gap: 15px;
+  }
+}
+
+@media print {
+  body {
+    background: white;
+  }
+  button, footer { display: none; }
+  .card {
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
+}
+
+
+

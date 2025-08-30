@@ -1,0 +1,41 @@
+* {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    height: 60vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.buttons {
+    display: flex;
+    gap: 10px;
+}
+
+button {
+    background-color: rgb(63, 114, 255);
+    border-style: none;
+    padding: 8px;
+    border-radius: 3px;
+    color: white;
+}
+
+h1 {
+    font-size: 56px;
+}
+
+p {
+    font-size: 25px;
+}
+
+#guess {
+    width: 100px;
+    padding: 10px;
+    font-size: 25px;
+    text-align: center;
+}

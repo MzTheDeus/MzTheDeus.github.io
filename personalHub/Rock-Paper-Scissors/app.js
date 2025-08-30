@@ -76,8 +76,8 @@ function resetGame() {
         paper.classList.remove("disable");
         rock.classList.remove("disable");
         scissors.classList.remove("disable");
-        right.textContent = "";
-        left.textContent = "";
+        right.textContent = "?";
+        left.textContent = "?";
 };
 
 

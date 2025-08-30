@@ -37,8 +37,7 @@ body, html {
 }
 
 
-.links {
-}
+
 
 .main-card {
     background-color: #272727e7;
@@ -86,6 +85,7 @@ a {
 a:hover {
     background-color: rgb(65, 65, 65);
     box-shadow: #7a7a7a 0px 0px 0px 2px;
+    color: rgb(159, 208, 228);
 }
 
 li {
