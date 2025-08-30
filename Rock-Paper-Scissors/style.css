@@ -1,0 +1,163 @@
+*{
+    margin: 0;
+    font-family: "Work Sans", 'Trebuchet MS', sans-serif;
+    font-weight: bold;
+}
+
+
+body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    height: 60vh;
+    background-color: #e2d5b2;
+}
+
+
+p {
+    font-size: 25px;
+    text-align: center;
+}
+
+.buttons {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    
+}
+
+
+#paper {
+    font-size: 23px;
+}
+
+.buttons > button {
+    width: 100px;
+    height: 80px;
+    font-size: 30px;
+    box-shadow: 3px 3px 6px 0px #999999;
+}
+
+button {
+    border-style: none;
+    padding: 10px 20px;
+    border-radius: 15px;
+    background-color: rgb(51, 109, 235);
+    font-size: 20px;
+    color: white;
+    font-weight: bold;
+    transition: background-color 0.5s ease;
+}
+
+button:hover {
+    cursor: pointer;
+    background-color: rgb(51, 54, 235);
+}
+
+#score {
+    margin: 0px 0px 20px 0px;
+    background-color: gray;
+    border-radius: 10px;
+    padding: 10px 50px;
+    color: white;
+    box-shadow: 0px 4px 0px 0px #5f5f5f;
+}
+
+#result {
+    margin: 0px;
+}
+
+#reset {
+    background-color: rgb(255, 54, 54);
+    text-transform: uppercase;
+    width: 100px;
+    height: 50px;
+    text-align: center;
+    margin-top: 5px;
+    padding: 10px 10px;
+}
+
+.disable {
+  filter: grayscale(1) brightness(0.8);
+  box-shadow: none;
+  cursor: not-allowed !important;
+}
+
+.card {
+    background: #66edff;
+    background: linear-gradient(180deg, rgba(102, 237, 255, 1) 0%, rgba(117, 235, 133, 1) 100%);
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0px 0px 25px 1px #999999;
+    width: 400px;
+}
+
+.show-result {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 30px;
+    max-height: 180px;
+    margin: 15px;
+}
+
+.show-result > p {
+    background-color: rgb(28, 30, 122);
+    padding: 15px;
+    border-radius: 200px;
+    width: 80px;
+    height: 80px;
+    border: solid 5px white;
+    box-shadow: 0px 0px 25px 1px #999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 70px;
+}
+
+
+
+
+@media (max-width: 700px) {
+    body{
+        margin: 4px;
+        height: 85vh;
+    }
+    #score{
+        font-size: 17px
+    }
+    .card{
+        width: 300px;
+    }
+    #result{
+        font-size: 19px
+    }
+    #reset {
+        margin-top: 120px
+    }
+    .show-result {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        max-height: 180px;
+        margin: 55px 15px;
+    }
+    .show-result > p {
+        width: 70px;
+        height: 70px;
+        border: solid 5px white;
+        box-shadow: 0px 0px 25px 1px #999999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 70px;
+    }
+    h2{
+        font-style: italic;
+        color: white;
+        text-shadow: 2px 2px black;
+    }
+};
