@@ -55,10 +55,10 @@ p {
 }
 
 h1 {
-    color: rgb(241, 241, 241);
+    color: rgb(255, 102, 0);
     font-size: 44px;
     margin-bottom: 15px;
-    text-shadow: 3px 3px rgb(116, 116, 116);
+    text-shadow: 3px 3px rgb(177, 177, 177);
 }
 
 button {
@@ -96,4 +96,24 @@ footer {
     max-width: 500px;
     gap: 15px;
   }
+}
+
+#change {
+    background-color: rgb(84, 115, 255);
+    font-size: 15px;
+    padding: 7px 19px;
+    text-align: center;
+
+}
+
+a {
+    text-decoration: none;
+    color: white;
+}
+
+.btn-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
 }
