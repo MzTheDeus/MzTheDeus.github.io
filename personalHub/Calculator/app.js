@@ -78,7 +78,7 @@ buttons.addEventListener("click", function(e) {
         miniDisplay.textContent = `${left} ${calculator.operator} ${right} =`;
 
         let rounded = Math.round((result + Number.EPSILON) * 1e9) / 1e9;
-        calculator.displayValue = String(rounded).replace(/\.?0+$/, "");
+        calculator.displayValue = String(rounded);
         if (calculator.displayValue === "-0") calculator.displayValue = "0"; // optional
         calculator.firstOperand = rounded;
         calculator.lastRightOperand = right;
