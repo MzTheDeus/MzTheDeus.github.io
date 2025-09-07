@@ -5,9 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
     <link rel="stylesheet" href="/personalHub/NotesApp/style.css">
-    <script src="/personalHub/NotesApp/app.js"></script>
+    <script src="/personalHub/NotesApp/app.js" defer></script>
 </head>
 <body>
-    
+    <div class="formArea">
+        <input type="text" id="title">
+        <textarea name="" id="body"></textarea>
+        <button id="addBtn">Add</button>
+    </div>
+    <div id="notes"></div>
 </body>
 </html>

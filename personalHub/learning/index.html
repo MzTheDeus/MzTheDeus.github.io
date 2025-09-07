@@ -1,28 +1,49 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <link rel="stylesheet" href="/learning/styles.css">
+  <title>Notes App</title>
 </head>
 <body>
-    <button id="btn">Click me</button>
-    <p>You clicked <span id="count">0</span> times</p>
+  <h1>My Notes</h1>
+  
+  <input id="noteInput" placeholder="Write a note..." />
+  <button id="saveBtn">Add Note</button>
 
-    <p>Hej nere här finns en text du inte kan se, testa tryck på knappen</p>
-    <p id="message" class="hidden">hej! Jag är en text du kan dölja eller visa.</p>
-    <button id="toggleBtn">Show more</button>
+  <ul id="notesList"></ul>
 
-    <input type="text" id="input-1">
-    <input type="text" id="input-2">
-    <input type="text" id="input-3">
-    <button id="addBtn">Add</button>
-    <button id="subBtn">subtract</button>
-    <button id="oddBtn">Even or odd</button>
-    <ul id="output"></ul>
-    <div id="nameCard"></div>
+  <script>
+    let notes = [];
+    const SAVED_KEY = "notes";
+
+    // Load saved notes (your code)
+    const saved = localStorage.getItem(SAVED_KEY);
+    if (saved) {
+      notes = JSON.parse(saved);
+    }
+
+    // Render notes on screen
+    function renderNotes() {
+      const list = document.getElementById("notesList");
+      list.innerHTML = "";
+      notes.forEach(note => {
+        const li = document.createElement("li");
+        li.textContent = note.text;
+        list.appendChild(li);
+      });
+    }
+
+    // Add new note
+    document.getElementById("saveBtn").addEventListener("click", () => {
+      const input = document.getElementById("noteInput");
+      const newNote = { id: Date.now(), text: input.value };
+      notes.push(newNote);
+      localStorage.setItem(SAVED_KEY, JSON.stringify(notes));
+      input.value = "";
+      renderNotes();
+    });
+
+    // Show saved notes when page loads
+    renderNotes();
+  </script>
 </body>
 </html>
-
-<script src="/learning/main.js"></script>
