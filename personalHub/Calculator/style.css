@@ -4,6 +4,19 @@
     gap: 2px;
 }
 
+.dark-light {
+    align-self: flex-end;
+    background-color: white;
+    color: white;
+    font-size: 30px;
+    border-radius: 100px;
+    margin-left: 15px;
+}
+
+body {
+    background-color: white;
+}
+
 .calc {
     width: 300px;;
     margin: 50px auto;

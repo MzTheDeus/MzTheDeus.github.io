@@ -8,12 +8,13 @@ const calculator = {
 }
 
 console.log()
+let isDark = true;
 
-
-
+const body = document.querySelector("body");
 const miniDisplay = document.querySelector(".miniDisplay");
 const display = document.getElementById("display");
 const buttons = document.querySelector(".buttons");
+const dark = document.querySelector(".dark-light");
 const practise = document.getElementById("practise");
 
 buttons.addEventListener("click", function(e) {
@@ -144,6 +145,21 @@ practise.addEventListener("click", function(e) {
         display.style.color = "#b2ffc3ff";
     } else if (color === "3") {
         display.style.color = "#b2fff5ff";
+    }
+});
+
+
+dark.addEventListener("click", () => {
+    if(isDark) {
+        isDark = false;
+        dark.style.backgroundColor = "#202020";
+        body.style.backgroundColor = "#202020"
+        dark.textContent = "☀️"
+    } else {
+        isDark = true;
+        dark.style.backgroundColor = "white";
+        body.style.backgroundColor = "white"
+        dark.textContent = "🌙"
     }
 });
 
