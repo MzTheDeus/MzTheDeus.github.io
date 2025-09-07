@@ -20,9 +20,7 @@ button {
     background-color: #e4e4e4;
 }
 
-button:hover {
-    background-color: #f3f3f3;
-}
+
 
 .disp {
     background-color: #333;
@@ -77,3 +75,15 @@ body {
 [data-num="3"] {
     color: #b2fff5ff;
 }
+
+@media (hover: hover) and (pointer: fine) {
+    .buttons button:hover {
+        background-color: #ccc;
+    }
+}
+
+
+button:active {
+    transform: scale(0.96);
+}
+
