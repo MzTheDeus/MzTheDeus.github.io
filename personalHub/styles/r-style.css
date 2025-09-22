@@ -150,6 +150,7 @@ svg {
 
   .work-container {
     padding-right: 15px;
+    margin-bottom: 130px;
   }
   .projects {
     margin-top: 60px
@@ -168,6 +169,9 @@ svg {
   .card {
     box-shadow: none;
     border: 1px solid #ddd;
+  }
+    .work-exp {
+      padding-top: 10px;
   }
 }
 

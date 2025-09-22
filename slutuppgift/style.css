@@ -1,0 +1,393 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family:"Montserrat", 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+}
+
+html {
+    background-color: #181818;
+    color: rgb(245, 245, 245);
+}
+
+
+
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 8px auto;
+    max-width: 80vw;
+    padding: 20px 0;
+}
+
+.nav {
+    display: flex;
+    gap: 15px;
+    list-style: none;
+}
+
+.sign-btn button {
+    border: none;
+    padding: 5px 8px;
+    background-color: rgb(69, 69, 255);
+    border-radius: 3px;
+    color: white;
+}
+
+.sign-btn > .sign-in {
+    background-color: rgb(255, 255, 255);
+    color: rgb(69, 69, 255);
+}
+
+.home {
+    color: rgb(69, 69, 255);
+    font-weight: bold;
+}
+
+
+
+
+
+ul {
+    list-style: none;
+}
+
+main {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-width: 80vw;
+    height: 70vh;
+    margin: auto;
+}
+
+.main-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 410px;
+    color: white;
+}
+
+.main-container > h1 {
+    font-size: 80px;
+}
+.main-container > p {
+    font-size: 26px;
+    margin: 25px 0px;
+    color: #ccc;
+}
+
+
+
+.btn-container > button {
+    background-color: rgb(69, 69, 255);
+    border-radius: 4px;
+    border: none;
+    padding: 9px 18px;
+    color: white;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.real-main {
+    background: url(/slutuppgift/images/pexels-pixabay-416747.jpg) no-repeat center center/cover;
+}
+
+.btn-container > .btn-learn {
+    background-color: rgb(26, 26, 26);
+    margin-left: 7px;
+    border: solid 1px white;
+}
+
+.splide {
+
+}
+
+.splide__slide {
+    background-color: rgb(26, 26, 26);
+    color: white;
+    height: 300px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.splide__slide > p {
+    margin-bottom: 35px;
+    color: #ccc;
+    width: 400px;
+    margin: 5px auto;
+    padding: 15px;
+}
+
+a {
+    color: rgb(69, 69, 255);
+    text-decoration: none;
+    font-weight: bold;
+    padding: 2px;
+}
+
+.header-text {
+    margin: 50px 0px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.header-text > p {
+    max-width: 320px;
+    text-align: center;
+    color: #ccc;
+    margin-top: 5px;
+}
+.header-text > h1 {
+    font-size: 43px;
+}
+
+.card-container {
+    margin: auto;
+    max-width: 80vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 150px;
+    gap: 25px;
+}
+
+.card {
+    background-color: rgb(36, 36, 36);
+    height: 435px;
+    min-width: 200px;
+    width: 320px;
+    border-radius: 25px;
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 15px;
+    border: 1px solid rgb(66, 66, 66);
+}
+
+
+.card-btn > button {
+    display: flex;
+    border: none;
+    padding: 5px 15px;
+    border-radius: 150px;
+    font-weight: bold;
+    font-size: 18px;
+    margin-top: 15px;
+    background-color: rgb(69, 69, 255);
+    color: white;
+}
+
+
+
+.card-header > h2 {
+    margin-bottom: 25px;
+}
+.card-header > p {
+    margin-bottom: 25px;
+    font-size: 25px;
+}
+
+.card-header > ul {
+    color: #ccc;
+    font-size: 18px;
+
+}
+
+
+.pricing-container {
+    background-color: #111111;
+    padding: 25px;
+}
+
+.about-container {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    justify-content: center;
+    padding: 150px 0;
+    background-color: #1d1d1d;
+}
+
+.image-info > img {
+    width: 300px;
+    height: 400px;
+    object-fit: cover;
+    border-radius: 15px;
+}
+
+.image-info > p {
+    color: #ccc;
+}
+
+.about-text > p {
+    width: 200px;
+}
+.about-text > h2 {
+    font-size: 50px;
+    width: 400px;
+}
+
+footer > ul {
+    display: flex;
+    gap: 25px;
+    margin-top: 15px;
+}
+
+footer {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    margin: 8px auto;
+    max-width: 80vw;
+    padding: 50px;
+}
+
+hr {
+    width: 80vw;
+    color: #1d1d1d;
+    border: #636363 1px solid;
+    margin: 50px;
+}
+
+.copyright {
+    color: #ccc;
+}
+
+.contact-container {
+  background-color: #111111;
+  padding: 80px 20px;
+}
+
+.contact-inner {
+  max-width: 80vw;
+  margin: 0 auto;
+  background: #1a1a1a;
+  border: 1px solid rgb(66, 66, 66);
+  border-radius: 20px;
+  padding: 32px;
+  display: grid;
+  grid-template-columns: 1.1fr 1.4fr;
+  gap: 32px;
+}
+
+.contact-copy h2 {
+  font-size: 42px;
+  margin-bottom: 10px;
+}
+
+.contact-copy p {
+  color: #ccc;
+  line-height: 1.6;
+}
+
+.contact-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 20px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-field label {
+  font-weight: 600;
+  font-size: 14px;
+  color: #e8e8e8;
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea {
+  background: #242424;
+  color: #fff;
+  border: 1px solid #424242;
+  border-radius: 12px;
+  padding: 12px 14px;
+  outline: none;
+}
+
+.form-field input::placeholder,
+.form-field textarea::placeholder {
+  color: #9b9b9b;
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+  border-color: rgb(69, 69, 255);
+  box-shadow: 0 0 0 3px rgba(69, 69, 255, 0.25);
+}
+
+.form-span {
+  grid-column: 1 / -1;
+}
+
+.consent {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 4px;
+  color: #dcdcdc;
+  font-size: 14px;
+}
+
+.consent input[type="checkbox"] {
+  accent-color: rgb(69, 69, 255);
+  margin-top: 2px;
+}
+
+.contact-btn {
+  grid-column: 1 / -1;
+  justify-self: start;
+  background-color: rgb(69, 69, 255);
+  color: #fff;
+  border: none;
+  font-weight: 700;
+  font-size: 16px;
+  padding: 12px 22px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.contact-btn:hover {
+  opacity: 0.95;
+}
+
+.privacy-hint {
+  grid-column: 1 / -1;
+  font-size: 13px;
+  color: #9b9b9b;
+  margin-top: -6px;
+}
+
+/* Visar bara att förmågan att göra mobil vänligt finns
+Men inget krav i kursen så jag skippade det andra sektionerna */
+
+
+@media (max-width: 900px) {
+  .contact-inner {
+    grid-template-columns: 1fr;
+  }
+  .contact-copy h2 {
+    font-size: 34px;
+  }
+  .contact-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* Enda delen jag har fått hjälp med är kontakt sektionen 
+då jag frågade om bättre struktur men det är 90% gjort att mig */

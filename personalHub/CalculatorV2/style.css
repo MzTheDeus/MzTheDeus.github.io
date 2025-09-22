@@ -1,0 +1,24 @@
+*{
+    font-family: "Figtree", sans-serif;
+}
+
+button {
+    font-size: 40px;
+}
+
+#buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+}
+
+.display-container {
+    background-color: rgb(70, 70, 70);
+    color: white;
+    padding: 15px;
+    text-align: right;
+}
+
+#display {
+    font-size: 35px;
+}
